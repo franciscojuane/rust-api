@@ -4,9 +4,11 @@ use crate::errors::errors::Errors;
 use crate::models::address::Address;
 use crate::models::times::Times;
 
+
+
 #[derive(Debug)]
 pub struct Warehouse {
-    pub id: Option<i32>,
+    pub id: Option<u64>,
     pub warehouse_key: String,
     pub name: String,
     pub address: Address,
