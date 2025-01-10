@@ -1,12 +1,13 @@
 use std::error::Error;
 use crate::errors::errors::Errors;
-use crate::models::entities::Warehouse;
+use crate::models::entities::{Item, Warehouse};
 
 pub trait Repository<T> {
     fn create(&mut self, item: T);
     fn find_by_id(&self,id: u64) -> Option<&T>;
     fn update(&mut self, id: u64, item: T);
     fn delete(&mut self, id: u64) -> Result<T, Errors>;
+    fn list(&self) -> Vec<&T>;
 }
 
 pub struct WarehouseRepository {
@@ -57,4 +58,24 @@ impl Repository<Warehouse> for WarehouseRepository {
 
         Ok(element_to_remove)
     }
+
+    fn list(&self) -> Vec<&Warehouse> {
+        self.items.iter().collect()
+    }
 }
+
+pub struct ItemRepository {
+    items: Vec<Item>
+}
+
+impl ItemRepository {
+    pub fn new() -> Self {
+        ItemRepository {
+            items: vec![]
+        }
+    }
+}
+
+
+
+
