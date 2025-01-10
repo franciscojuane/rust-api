@@ -42,32 +42,6 @@ impl Warehouse {
             expiration_time: None,
         }
     }
-
-    pub fn add_item(&mut self, item: Item) -> () {
-        self.items.push(item);
-    }
-
-    pub fn delete_item_by_item_id(&mut self, id: i32) -> Result<Item, Errors> {
-        let mut counter = 0;
-        for item in self.items.iter() {
-            if (item.id.unwrap() == id) {
-                break;
-            }
-            counter += 1;
-        }
-        if counter == self.items.len() {
-            return Err(Errors::ElementNotFound)
-        }
-
-        let element_to_remove = self.items.remove(counter);
-
-        Ok(element_to_remove)
-    }
-
-
-
-
-
 }
 
 #[derive(Debug)]
@@ -98,7 +72,3 @@ impl Item {
         }
     }
 }
-
-
-
-
