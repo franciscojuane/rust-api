@@ -46,7 +46,7 @@ impl Warehouse {
 
 #[derive(Debug)]
 pub struct Item {
-    pub id: Option<i32>,
+    pub id: Option<u64>,
     pub name: String,
     pub units: i32,
     pub price: f32,
