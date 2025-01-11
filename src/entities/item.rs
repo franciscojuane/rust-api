@@ -16,6 +16,8 @@ pub struct Model {
     pub update_time: Option<DateTime>,
     pub effective_time: Option<DateTime>,
     pub expiration_time: Option<DateTime>,
+    #[sea_orm(column_type = "Double")]
+    pub weight: f64,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
