@@ -56,7 +56,6 @@ impl WarehouseRepository{
         //let warehouse = warehouse::Entity::find_by_id(id as i32).one(db).await.unwrap();
         let mut warehouse_active : warehouse::ActiveModel = item;
         warehouse_active.id = ActiveValue::Set(id);
-        println!("{:?}", &warehouse_active);
         Warehouse::update(warehouse_active).exec(db).await.map(|_| ()).map_err(|_| CustomError::UpdateError)
     }
 
