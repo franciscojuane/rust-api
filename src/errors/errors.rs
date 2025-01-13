@@ -1,3 +1,7 @@
-pub enum Errors {
-    ElementNotFound
+#[derive(Debug)]
+pub enum CustomError {
+    ElementNotFound,
+    CreationError,
+    UpdateError,
+    ReadError,
 }
