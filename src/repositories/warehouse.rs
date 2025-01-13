@@ -54,7 +54,6 @@ impl WarehouseRepository{
 
     pub async fn update(&mut self, id: i32, item: warehouse::ActiveModel) -> Result<(), CustomError> {
         let db = &self.app_state.database_connection;
-        //let warehouse = warehouse::Entity::find_by_id(id as i32).one(db).await.unwrap();
         let mut warehouse_active : warehouse::ActiveModel = item;
         warehouse_active.id = ActiveValue::Set(id);
         Warehouse::update(warehouse_active).exec(db).await.map(|_| ()).map_err(|_| CustomError::UpdateError)
