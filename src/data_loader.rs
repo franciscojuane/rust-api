@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::ops::Deref;
 use std::sync::Arc;
 use chrono::Utc;
@@ -8,13 +9,14 @@ use crate::entities::{item, warehouse};
 use crate::entities::warehouse::Column::Region;
 use crate::enums::enums::RegionEnum;
 use crate::models::address::Address;
+use crate::repositories::item::ItemRepository;
 use crate::repositories::warehouse::{WarehouseRepository};
 
 pub struct AppState{
     pub database_connection: DatabaseConnection
 }
 
-pub async fn load_data() {
+pub async fn load_data() -> Result<(), dyn Error>{
     let database_url = "mysql://root:root@localhost:3306/warehouse_db";
     let db = Database::connect(database_url).await.unwrap();
 
@@ -22,35 +24,57 @@ pub async fn load_data() {
         database_connection: db
     });
 
-    let mut warehouse_repository = WarehouseRepository::new(appState);
+    let mut warehouse_repository = WarehouseRepository::new(Arc::clone(&appState));
+    let mut item_repository = ItemRepository::new(Arc::clone(&appState));
+
 
     let warehouse1 = warehouse::Model {
         id: Default::default(),
-        warehouse_key: "WAREHOUSE_A".to_string(),
-        name: "Warehouse A".to_string(),
-        street: "Calle Falsa".to_string(),
+        warehouse_key: "MAIN_WAREHOUSE".to_string(),
+        name: "Main Warehouse".to_string(),
+        street: "Fake Street".to_string(),
         number: 123,
-        city: "Salta".to_string(),
-        region: "Salta".to_string(),
-        postal_code: "4400".to_string(),
-        creation_time: Default::default(),
-        update_time: None,
-        effective_time: None,
-        expiration_time: None,
+        city: "Miami".to_string(),
+        region: "FL".to_string(),
+        postal_code: "12345".to_string(),
+        ..Default::default()
     };
 
-    let new_warehouse = warehouse_repository.create(&warehouse1).await;
+    let warehouse1_id = warehouse_repository.create(&warehouse1).await?;
 
-    println!("{:?}", &new_warehouse);
-
-    if let Ok(id) = new_warehouse {
-        let mut warehouse2 = warehouse1.into_active_model();
-        warehouse2.number = ActiveValue::Set(678);
-        warehouse2.name = ActiveValue::Set("Warehouse XZ".to_owned());
-        warehouse_repository.update((id as i32) - 1, warehouse2).await;
+    let item1 = item::Model{
+        id: Default::default(),
+        name: "iPhone 14 ".to_owned(),
+        units: 23,
+        price: 500.00,
+        warehouse_id: warehouse1_id,
+        ..Default::default()
     };
 
-    let x = warehouse_repository.read(7).await;
-    println!("{:?}", x.unwrap());
-   
+    let item1_id = item_repository.create(&item1).await?;
+
+    let item2 = item::Model{
+        id: Default::default(),
+        name: "iPhone 14 Pro ".to_owned(),
+        units: 38,
+        price: 700.00,
+        warehouse_id: warehouse1_id,
+        ..Default::default()
+    };
+
+    let item2_id = item_repository.create(&item2).await?;
+
+    let item3 = item::Model{
+        id: Default::default(),
+        name: "iPhone 14 Pro Max".to_owned(),
+        units: 15,
+        price: 900.00,
+        warehouse_id: warehouse1_id,
+        ..Default::default()
+    };
+
+    let item3_id = item_repository.create(&item3).await?;
+
+    Ok(())
 }
+
