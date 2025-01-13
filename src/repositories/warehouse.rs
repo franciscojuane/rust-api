@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::ops::Deref;
 use std::sync::Arc;
+use chrono::Utc;
 use sea_orm::{ActiveValue, DbErr, EntityTrait, InsertResult, IntoActiveModel};
 use crate::data_loader::AppState;
 use crate::entities::prelude::Warehouse;
@@ -33,8 +34,8 @@ impl WarehouseRepository{
             city: ActiveValue::Set(item.city.clone()),
             region: ActiveValue::Set(item.region.clone()),
             postal_code: ActiveValue::Set(item.postal_code.clone()),
-            creation_time: ActiveValue::Set(item.creation_time),
-            update_time: ActiveValue::Set(item.update_time),
+            creation_time: ActiveValue::Set(Some(Utc::now().naive_utc())),
+            update_time: ActiveValue::Set(Some(Utc::now().naive_utc())),
             effective_time: ActiveValue::Set(item.effective_time),
             expiration_time: ActiveValue::Set(item.expiration_time),
         };
