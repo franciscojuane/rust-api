@@ -47,7 +47,7 @@ async fn initialize_app_state() -> AppState {
 
 }
 
-async fn initialize_database<'a>(app_state: &mut AppState) -> DatabaseConnection {
+async fn initialize_database(app_state: &mut AppState) -> DatabaseConnection {
    let database_url = "mysql://root:root@localhost:3306/warehouse_db";
    let db = Database::connect(database_url).await.unwrap();
    db

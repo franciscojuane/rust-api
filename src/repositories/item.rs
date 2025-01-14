@@ -39,7 +39,7 @@ impl ItemRepository{
      }
 
     pub async fn read(&self, id: u64) -> Result<item::Model, CustomError>{
-        let db = self.database_connection.write().await;
+        let db = self.database_connection.read().await;
         Item::find_by_id(id as i32).one(&*db).await.map(|x| x.unwrap()).map_err(|_| CustomError::ReadError)
     }
 

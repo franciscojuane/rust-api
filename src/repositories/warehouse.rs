@@ -44,7 +44,7 @@ impl WarehouseRepository{
 
 
     pub async fn read(&self, id: u64) -> Result<warehouse::Model, CustomError>{
-        let db = self.database_connection.write().await;
+        let db = self.database_connection.read().await;
         Warehouse::find_by_id(id as i32).one(&*db).await.map(|x| x.unwrap()).map_err(|_| CustomError::ReadError)
     }
 
