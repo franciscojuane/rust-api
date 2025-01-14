@@ -11,7 +11,6 @@ use std::sync::Arc;
 
 pub async fn load_data(app_state: &mut AppState) -> Result<(), Box<dyn Error>>{
 
-
     let mut warehouse_repository = Arc::clone(&app_state.warehouse_repository.as_mut().unwrap());
     let mut item_repository = Arc::clone(&app_state.item_repository.as_mut().unwrap());
 

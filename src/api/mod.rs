@@ -1,2 +1,2 @@
-mod warehouse;
+pub mod warehouse;
 mod item;

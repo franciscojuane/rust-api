@@ -4,6 +4,7 @@ use entities::*;
 use sea_orm::{Database, DatabaseConnection};
 use std::error::Error;
 use std::sync::Arc;
+use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
 mod entities;
@@ -26,6 +27,14 @@ async fn main() {
 
    let mut app_state = initialize_app_state().await;
    data_loader::load_data(&mut app_state).await;
+
+   let routes = crate::api::warehouse::warehouse_routes(Arc::new(app_state));
+
+   let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
+   println!("->> LISTENING on {:?}\n", listener.local_addr());
+   axum::serve(listener, routes.into_make_service())
+       .await
+       .unwrap();
 
 
 }

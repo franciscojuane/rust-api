@@ -4,8 +4,9 @@ use crate::entities::prelude::Warehouse;
 use crate::entities::warehouse;
 use crate::errors::errors::CustomError;
 use chrono::Utc;
-use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait};
+use sea_orm::{ActiveValue, DatabaseConnection, DbErr, EntityTrait, TryGetError};
 use tokio::sync::RwLock;
+use crate::entities::warehouse::Model;
 
 pub struct WarehouseRepository {
     database_connection: Arc<RwLock<DatabaseConnection>>
@@ -45,7 +46,21 @@ impl WarehouseRepository{
 
     pub async fn read(&self, id: u64) -> Result<warehouse::Model, CustomError>{
         let db = self.database_connection.read().await;
-        Warehouse::find_by_id(id as i32).one(&*db).await.map(|x| x.unwrap()).map_err(|_| CustomError::ReadError)
+        let result = Warehouse::find_by_id(id as i32).one(&*db).await;
+            match result {
+                Ok(item) => {
+                    match item{
+                        None => {Err(CustomError::ElementNotFound)}
+                        Some(warehouse) => {Ok(warehouse)}
+                    }
+                    }
+                Err(error) => {
+                    match error {
+                        DbErr::RecordNotFound(_) => {Err(CustomError::ElementNotFound)},
+                        _ => {Err(CustomError::DatabaseError)}
+                    }
+                    }
+            }
     }
 
     pub async fn update(&mut self, id: i32, item: warehouse::ActiveModel) -> Result<(), CustomError> {

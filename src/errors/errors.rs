@@ -8,6 +8,7 @@ pub enum CustomError {
     CreationError,
     UpdateError,
     ReadError,
+    DatabaseError,
 }
 
 impl Display for CustomError {
