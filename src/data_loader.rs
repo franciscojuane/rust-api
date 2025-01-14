@@ -1,37 +1,19 @@
-use std::error::Error;
-use std::ops::Deref;
-use std::sync::Arc;
-use chrono::Utc;
-use fake::{faker, rand, Fake, Rng};
+use crate::entities::{item, warehouse};
+use crate::AppState;
 use fake::faker::address::en::{CityName, StateAbbr};
 use fake::faker::address::raw::StreetName;
-use fake::faker::name::en::Name;
 use fake::faker::number::raw::NumberWithFormat;
 use fake::locales::EN;
-use sea_orm::{ActiveValue, Database, DatabaseConnection, EntityTrait, IntoActiveModel};
-use crate::entities::prelude::Warehouse;
-use crate::entities::prelude::Item;
-use crate::entities::{item, warehouse};
-use crate::entities::warehouse::Column::{Region, Street};
-use crate::enums::enums::RegionEnum;
-use crate::models::address::Address;
-use crate::repositories::item::ItemRepository;
-use crate::repositories::warehouse::{WarehouseRepository};
+use fake::{faker, rand, Fake, Rng};
+use sea_orm::EntityTrait;
+use std::error::Error;
+use std::sync::Arc;
 
-pub struct AppState{
-    pub database_connection: DatabaseConnection
-}
+pub async fn load_data(app_state: &mut AppState) -> Result<(), Box<dyn Error>>{
 
-pub async fn load_data() -> Result<(), Box<dyn Error>>{
-    let database_url = "mysql://root:root@localhost:3306/warehouse_db";
-    let db = Database::connect(database_url).await.unwrap();
 
-    let appState = Arc::new(AppState{
-        database_connection: db
-    });
-
-    let mut warehouse_repository = WarehouseRepository::new(Arc::clone(&appState));
-    let mut item_repository = ItemRepository::new(Arc::clone(&appState));
+    let mut warehouse_repository = Arc::clone(&app_state.warehouse_repository.as_mut().unwrap());
+    let mut item_repository = Arc::clone(&app_state.item_repository.as_mut().unwrap());
 
     let mut warehouse_id = 0;
     for i in 1..=10 {
@@ -48,7 +30,7 @@ pub async fn load_data() -> Result<(), Box<dyn Error>>{
             ..Default::default()
         };
 
-        warehouse_id = warehouse_repository.create(&warehouse1).await?;
+        warehouse_id = warehouse_repository.write().await.create(&warehouse1).await?;
 
         let item_list = ["iPhone 14", "iPhone 14 Pro", "iPhone 14 Pro Max", "Samsung Galaxy",
         "Sony Projector", "Asus Display", "Logitech Camera", "Genius Mouse"];
@@ -61,7 +43,7 @@ pub async fn load_data() -> Result<(), Box<dyn Error>>{
                 warehouse_id,
                 ..Default::default()
             };
-            item_repository.create(&item).await?;
+            item_repository.write().await.create(&item).await?;
         }
 
 
