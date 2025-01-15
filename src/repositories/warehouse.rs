@@ -4,9 +4,9 @@ use crate::entities::prelude::Warehouse;
 use crate::entities::warehouse;
 use crate::errors::errors::CustomError;
 use chrono::Utc;
-use sea_orm::{ActiveValue, DatabaseConnection, DbErr, EntityTrait, TryGetError};
+use sea_orm::{ActiveValue, DatabaseConnection, DbErr, DeleteResult, EntityTrait, InsertResult, TryGetError};
 use tokio::sync::RwLock;
-use crate::entities::warehouse::Model;
+use crate::entities::warehouse::{ActiveModel, Model};
 
 pub struct WarehouseRepository {
     database_connection: Arc<RwLock<DatabaseConnection>>
@@ -22,7 +22,6 @@ impl WarehouseRepository {
 
 impl WarehouseRepository{
     pub async fn create(&mut self, item: &warehouse::Model) -> Result<i32, CustomError> {
-
         let warehouse_active_model = warehouse::ActiveModel {
             id: ActiveValue::Set(item.id),
             warehouse_key: ActiveValue::Set(item.warehouse_key.clone()),
@@ -38,9 +37,15 @@ impl WarehouseRepository{
             expiration_time: ActiveValue::Set(item.expiration_time),
         };
         let db = self.database_connection.write().await;
-        Warehouse::insert(warehouse_active_model).exec(&*db).await.map(|x| x.last_insert_id).map_err(|_| CustomError::CreationError)
-
-
+        let result = Warehouse::insert(warehouse_active_model).exec(&*db).await;
+        match result {
+            Ok(insert_result) => {
+                Ok(insert_result.last_insert_id)
+            }
+            Err(error) => {
+                Err(CustomError::CreationError)
+            }
+        }
     }
 
 
@@ -63,20 +68,31 @@ impl WarehouseRepository{
             }
     }
 
-    pub async fn update(&mut self, id: i32, item: warehouse::ActiveModel) -> Result<(), CustomError> {
+    pub async fn update(&mut self, id: i32, item: warehouse::ActiveModel) -> Result<warehouse::Model, CustomError> {
         let mut warehouse_active : warehouse::ActiveModel = item;
         warehouse_active.id = ActiveValue::Set(id);
         let db = self.database_connection.write().await;
-        Warehouse::update(warehouse_active).exec(&*db).await.map(|_| ()).map_err(|_| CustomError::UpdateError)
+        let result = Warehouse::update(warehouse_active).exec(&*db).await;
+        match result {
+            Ok(value) => {Ok(value)}
+            Err(error) => {Err(CustomError::UpdateError)}
+        }
     }
 
     pub async fn delete(&mut self,  id: u64) -> Result<(), CustomError> {
         let db = self.database_connection.write().await;
-        let delete_result = Warehouse::delete_by_id(id as i32).exec(&*db).await.unwrap();
-        if delete_result.rows_affected == 0 {
-            Result::Err(CustomError::ElementNotFound)
-        } else {
-            Result::Ok(())
+        let result = Warehouse::delete_by_id(id as i32).exec(&*db).await;
+        match result {
+            Ok(delete_result) => {
+                if delete_result.rows_affected == 0 {
+                    Result::Err(CustomError::ElementNotFound)
+                } else {
+                    Result::Ok(())
+                }
+            }
+            Err(_) => {
+                Err(CustomError::DeletionError)
+            }
         }
     }
 

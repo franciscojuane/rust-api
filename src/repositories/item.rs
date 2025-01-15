@@ -1,10 +1,10 @@
 use std::ops::Deref;
 use std::sync::Arc;
-use crate::entities::prelude::Item;
+use crate::entities::prelude::{Item, Warehouse};
 use crate::entities::item;
 use crate::errors::errors::CustomError;
 use chrono::Utc;
-use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait};
+use sea_orm::{ActiveValue, DatabaseConnection, DbErr, EntityTrait};
 use tokio::sync::RwLock;
 
 pub struct ItemRepository {
@@ -35,28 +35,60 @@ impl ItemRepository{
             expiration_time: Default::default(),
         };
         let db = self.database_connection.write().await;
-        Item::insert(item_active_model).exec(&*db).await.map(|x| x.last_insert_id).map_err(|_| CustomError::CreationError)
-     }
+        let result = Item::insert(item_active_model).exec(&*db).await;
+        match result {
+            Ok(insert_result) => {
+                Ok(insert_result.last_insert_id)
+            }
+            Err(_) => {
+                Err(CustomError::CreationError)
+            }
+        }}
 
     pub async fn read(&self, id: u64) -> Result<item::Model, CustomError>{
         let db = self.database_connection.read().await;
-        Item::find_by_id(id as i32).one(&*db).await.map(|x| x.unwrap()).map_err(|_| CustomError::ReadError)
+        let result = Item::find_by_id(id as i32).one(&*db).await;
+        match result {
+            Ok(item) => {
+                match item{
+                    None => {Err(CustomError::ElementNotFound)}
+                    Some(element) => {Ok(element)}
+                }
+            }
+            Err(error) => {
+                match error {
+                    DbErr::RecordNotFound(_) => {Err(CustomError::ElementNotFound)},
+                    _ => {Err(CustomError::DatabaseError)}
+                }
+            }
+        }
     }
 
-    pub async fn update(&mut self, id: i32, item: item::ActiveModel) -> Result<(), CustomError> {
+    pub async fn update(&mut self, id: i32, item: item::ActiveModel) -> Result<item::Model, CustomError> {
         let mut item_active: item::ActiveModel = item;
         item_active.id = ActiveValue::Set(id);
         let db = self.database_connection.write().await;
-        Item::update(item_active).exec(&*db).await.map(|_| ()).map_err(|_| CustomError::UpdateError)
+        let result = Item::update(item_active).exec(&*db).await;
+        match result {
+            Ok(value) => {Ok(value)}
+            Err(error) => {Err(CustomError::UpdateError)}
+        }
     }
 
     pub async fn delete(&mut self,  id: u64) -> Result<(), CustomError> {
         let db = self.database_connection.write().await;
-        let delete_result = Item::delete_by_id(id as i32).exec(&*db).await.unwrap();
-        if delete_result.rows_affected == 0 {
-            Result::Err(CustomError::ElementNotFound)
-        } else {
-            Result::Ok(())
+        let result = Item::delete_by_id(id as i32).exec(&*db).await;
+        match result {
+            Ok(delete_result) => {
+                if delete_result.rows_affected == 0 {
+                    Result::Err(CustomError::ElementNotFound)
+                } else {
+                    Result::Ok(())
+                }
+            }
+            Err(_) => {
+                Err(CustomError::DeletionError)
+            }
         }
     }
 

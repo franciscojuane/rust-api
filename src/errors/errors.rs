@@ -9,6 +9,7 @@ pub enum CustomError {
     UpdateError,
     ReadError,
     DatabaseError,
+    DeletionError,
 }
 
 impl Display for CustomError {
