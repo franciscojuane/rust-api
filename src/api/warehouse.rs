@@ -50,7 +50,6 @@ struct ListParams {
 }
 async fn list_warehouses(Query(params) : Query<HashMap<String, u64>>, State(state): State<AppState>) -> Result<impl IntoResponse, impl IntoResponse> {
     let page =params.get("page").cloned().unwrap_or_else(|| 1);
-        //params.get("page").unwrap_or_else(|x| &1).clone();
     let page_size = params.get("page_size").cloned().unwrap_or_else(|| 10);
     let result = state.warehouse_repository
         .unwrap()
