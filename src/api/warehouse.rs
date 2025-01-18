@@ -43,7 +43,24 @@ async fn get_warehouse(
     }
 }
 
-async fn list_warehouses() -> impl IntoResponse {}
+struct ListParams {
+    page: Option<u64>,
+    page_size: Option<u64>
+}
+async fn list_warehouses(Query(params) : Query<ListParams>, State(state): State<AppState>) -> impl IntoResponse {
+    let result = state.warehouse_repository
+        .unwrap()
+        .read()
+        .await
+        .list(params.page, params.page_size)
+        .await;
+
+    match  result {
+        Ok(warehouses) => {Ok(Json(warehouses))}
+        Err(_) => {Err(StatusCode::INTERNAL_SERVER_ERROR)}
+    }
+
+}
 
 async fn create_warehouse() -> impl IntoResponse {}
 

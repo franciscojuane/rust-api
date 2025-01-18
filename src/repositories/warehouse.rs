@@ -4,7 +4,7 @@ use crate::entities::prelude::Warehouse;
 use crate::entities::warehouse;
 use crate::errors::errors::CustomError;
 use chrono::Utc;
-use sea_orm::{ActiveValue, DatabaseConnection, DbErr, DeleteResult, EntityTrait, InsertResult, TryGetError};
+use sea_orm::{ActiveValue, DatabaseConnection, DbErr, DeleteResult, EntityTrait, InsertResult, PaginatorTrait, QueryOrder, QuerySelect, TryGetError};
 use tokio::sync::RwLock;
 use crate::entities::warehouse::{ActiveModel, Model};
 
@@ -96,6 +96,23 @@ impl WarehouseRepository{
         }
     }
 
+
+    pub async fn list(&self, page: Option<u64>, page_size:Option<u64>) -> Result<Vec<warehouse::Model>, CustomError> {
+        let db = self.database_connection.read().await;
+        let limit = page_size.unwrap_or_else(|| 30);
+        let offset = limit * (page.unwrap_or_else(|| 1) - 1);
+        let results = Warehouse::find()
+            .limit(limit)
+            .offset(offset)
+            .order_by_asc(warehouse::Column::Id)
+            .all(&*db)
+            .await;
+
+        match results {
+            Ok(warehouses) => {Ok(warehouses)},
+            Err(E) => {Err(CustomError::ReadError)}
+        }
+    }
 }
 
 

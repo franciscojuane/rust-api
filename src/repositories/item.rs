@@ -1,10 +1,10 @@
 use std::ops::Deref;
 use std::sync::Arc;
 use crate::entities::prelude::{Item, Warehouse};
-use crate::entities::item;
+use crate::entities::{item, warehouse};
 use crate::errors::errors::CustomError;
 use chrono::Utc;
-use sea_orm::{ActiveValue, DatabaseConnection, DbErr, EntityTrait};
+use sea_orm::{ActiveValue, DatabaseConnection, DbErr, EntityTrait, QueryOrder, QuerySelect};
 use tokio::sync::RwLock;
 
 pub struct ItemRepository {
@@ -90,6 +90,25 @@ impl ItemRepository{
                 Err(CustomError::DeletionError)
             }
         }
+    }
+
+    pub async fn list(&self, page: Option<u64>, page_size:Option<u64>) -> Result<Vec<item::Model>, CustomError>{
+        let db = self.database_connection.read().await;
+        let limit = page_size.unwrap_or_else(|| 30);
+        let offset = limit * (page.unwrap_or_else(|| 1) - 1);
+        let results = Item::find()
+            .limit(limit)
+            .offset(offset)
+            .order_by_asc(item::Column::Id)
+            .all(&*db)
+            .await;
+
+        match results {
+            Ok(items) => {Ok(items)},
+            Err(E) => {Err(CustomError::ReadError)}
+        }
+
+
     }
 
 }
