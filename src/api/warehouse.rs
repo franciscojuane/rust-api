@@ -9,6 +9,7 @@ use axum::routing::{delete, get};
 use axum::{Json, Router};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use sea_orm::IntoActiveModel;
 
 pub fn warehouse_routes(app_state: Arc<AppState>) -> Router {
     Router::new()
@@ -47,12 +48,15 @@ struct ListParams {
     page: Option<u64>,
     page_size: Option<u64>
 }
-async fn list_warehouses(Query(params) : Query<ListParams>, State(state): State<AppState>) -> impl IntoResponse {
+async fn list_warehouses(Query(params) : Query<HashMap<String, u64>>, State(state): State<AppState>) -> Result<impl IntoResponse, impl IntoResponse> {
+    let page =params.get("page").cloned().unwrap_or_else(|| 1);
+        //params.get("page").unwrap_or_else(|x| &1).clone();
+    let page_size = params.get("page_size").cloned().unwrap_or_else(|| 10);
     let result = state.warehouse_repository
         .unwrap()
         .read()
         .await
-        .list(params.page, params.page_size)
+        .list(page, page_size)
         .await;
 
     match  result {
@@ -62,8 +66,43 @@ async fn list_warehouses(Query(params) : Query<ListParams>, State(state): State<
 
 }
 
-async fn create_warehouse() -> impl IntoResponse {}
+async fn create_warehouse(Json(payload): Json<warehouse::Model>, State(state): State<AppState>) -> impl IntoResponse {
+    let mut result = state.warehouse_repository
+        .unwrap()
+        .write()
+        .await
+        .create(&payload)
+        .await;
 
-async fn delete_warehouse() -> impl IntoResponse {}
+    match result {
+        Ok(id) => {Ok(Json(id))}
+        Err(error) => {Err(StatusCode::BAD_REQUEST)}
+    }
+}
 
-async fn update_warehouse() -> impl IntoResponse {}
+async fn delete_warehouse(State(state): State<AppState>, Path(id): Path<u64>) -> impl IntoResponse {
+    let result = state.warehouse_repository.unwrap().write().await.delete(id).await;
+    match result {
+        Ok(_) => {StatusCode::OK}
+        Err(error) => {
+            match(error){
+                CustomError::ElementNotFound => {StatusCode::NOT_FOUND}
+                CustomError::DeletionError => {StatusCode::INTERNAL_SERVER_ERROR},
+                _ => StatusCode::INTERNAL_SERVER_ERROR
+            }
+        }
+    }
+
+
+}
+
+async fn update_warehouse(State(state) : State<AppState>, Json(warehouse): Json<warehouse::Model> , Path(id) : Path<u64>) -> impl IntoResponse {
+    let result = state.warehouse_repository.unwrap()
+        .write().await
+        .update(id as i32, warehouse.into_active_model()).await;
+    match result {
+        Ok(value) => {Ok(Json(value))},
+        Err(error) => {Err(StatusCode::BAD_REQUEST)}
+    }
+
+}

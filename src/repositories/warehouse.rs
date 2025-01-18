@@ -97,10 +97,10 @@ impl WarehouseRepository{
     }
 
 
-    pub async fn list(&self, page: Option<u64>, page_size:Option<u64>) -> Result<Vec<warehouse::Model>, CustomError> {
+    pub async fn list(&self, page: u64, page_size:u64) -> Result<Vec<warehouse::Model>, CustomError> {
         let db = self.database_connection.read().await;
-        let limit = page_size.unwrap_or_else(|| 30);
-        let offset = limit * (page.unwrap_or_else(|| 1) - 1);
+        let limit = page_size;
+        let offset = limit * (page - 1);
         let results = Warehouse::find()
             .limit(limit)
             .offset(offset)
