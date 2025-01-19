@@ -4,7 +4,10 @@ use crate::entities::prelude::Warehouse;
 use crate::entities::warehouse;
 use crate::errors::errors::CustomError;
 use chrono::Utc;
-use sea_orm::{ActiveValue, DatabaseConnection, DbErr, DeleteResult, EntityTrait, InsertResult, PaginatorTrait, QueryOrder, QuerySelect, TryGetError};
+use sea_orm::{ActiveValue, DatabaseConnection, DbErr, DeleteResult, EntityTrait, InsertResult, IntoActiveModel, PaginatorTrait, QueryOrder, QuerySelect, TryGetError};
+use sea_orm::ActiveValue::Set;
+use sea_orm::prelude::DateTime;
+use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use crate::entities::warehouse::{ActiveModel, Model};
 
@@ -68,16 +71,56 @@ impl WarehouseRepository{
             }
     }
 
-    pub async fn update(&mut self, id: i32, item: warehouse::ActiveModel) -> Result<warehouse::Model, CustomError> {
-        let mut warehouse_active : warehouse::ActiveModel = item;
-        warehouse_active.id = ActiveValue::Set(id);
-        let db = self.database_connection.write().await;
-        let result = Warehouse::update(warehouse_active).exec(&*db).await;
+    pub async fn update(&mut self, id: i32, warehouse_update_dto: WarehouseUpdateDTO) -> Result<warehouse::Model, CustomError> {
+        let result = self.read(id as u64).await;
         match result {
-            Ok(value) => {Ok(value)}
-            Err(error) => {Err(CustomError::UpdateError)}
+            Ok(value) => {
+                let mut active_model = value.into_active_model();
+                if let Some(warehouse_key) = warehouse_update_dto.warehouse_key {
+                    active_model.warehouse_key = Set(warehouse_key);
+                }
+                if let Some(name) = warehouse_update_dto.name {
+                    active_model.name = Set(name);
+                }
+                if let Some(street) = warehouse_update_dto.street {
+                    active_model.street = Set(street);
+                }
+                if let Some(number) = warehouse_update_dto.number {
+                    active_model.number = Set(number);
+                }
+                if let Some(city) = warehouse_update_dto.city {
+                    active_model.city = Set(city);
+                }
+                if let Some(region) = warehouse_update_dto.region {
+                    active_model.region = Set(region);
+                }
+                if let Some(postal_code) = warehouse_update_dto.postal_code {
+                    active_model.postal_code = Set(postal_code);
+                }
+                    active_model.update_time = Set(Some(Utc::now().naive_utc()));
+                if let Some(effective_time) = warehouse_update_dto.effective_time {
+                    active_model.effective_time = Set(Some(effective_time));
+                }
+                if let Some(expiration_time) = warehouse_update_dto.expiration_time {
+                    active_model.expiration_time = Set(Some(expiration_time));
+                }
+                let db = self.database_connection.write().await;
+                let result = Warehouse::update(active_model).exec(&*db).await;
+                match result {
+                    Ok(model) => {
+                        Ok(model)
+                    }
+                    Err(error) => {
+                        Err(CustomError::UpdateError)
+                    }
+                }
+            },
+            Err(error) => {
+                Err(error)
+            }
         }
     }
+
 
     pub async fn delete(&mut self,  id: u64) -> Result<(), CustomError> {
         let db = self.database_connection.write().await;
@@ -113,6 +156,21 @@ impl WarehouseRepository{
             Err(E) => {Err(CustomError::ReadError)}
         }
     }
+}
+
+#[derive(Serialize,Deserialize)]
+pub struct WarehouseUpdateDTO {
+    pub warehouse_key: Option<String>,
+    pub name: Option<String>,
+    pub street: Option<String>,
+    pub number: Option<i32>,
+    pub city: Option<String>,
+    pub region: Option<String>,
+    pub postal_code: Option<String>,
+    pub creation_time: Option<DateTime>,
+    pub update_time: Option<DateTime>,
+    pub effective_time: Option<DateTime>,
+    pub expiration_time: Option<DateTime>
 }
 
 

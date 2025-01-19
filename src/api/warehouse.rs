@@ -9,7 +9,10 @@ use axum::routing::{delete, get, post};
 use axum::{debug_handler, Json, Router};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use sea_orm::ActiveValue::Set;
 use sea_orm::IntoActiveModel;
+use sea_orm::prelude::DateTime;
+use crate::repositories::warehouse::WarehouseUpdateDTO;
 
 pub fn warehouse_routes(app_state: Arc<AppState>) -> Router {
     Router::new()
@@ -89,16 +92,17 @@ async fn delete_warehouse(State(state): State<Arc<AppState>>, Path(id): Path<u64
             }
         }
     }
-
-
 }
-async fn update_warehouse(State(state) : State<Arc<AppState>>,  Path(id) : Path<u64>, Json(warehouse): Json<warehouse::Model>) -> impl IntoResponse {
-    let result = state.warehouse_repository.as_ref().unwrap()
-        .write().await
-        .update(id as i32, warehouse.into_active_model()).await;
-    match result {
-        Ok(value) => {Ok(Json(value))},
-        Err(error) => {Err(StatusCode::BAD_REQUEST)}
-    }
 
+#[axum::debug_handler]
+async fn update_warehouse(State(state) : State<Arc<AppState>>,  Path(id) : Path<u64>, Json(warehouse_update_dto): Json<WarehouseUpdateDTO>) -> impl IntoResponse {
+    let result = state.warehouse_repository.as_ref().unwrap().write().await.update(id as i32, warehouse_update_dto).await;
+    match result {
+        Ok(model) => {
+            Ok(Json(model))
+        },
+        Err(error) => {
+            Err(StatusCode::BAD_REQUEST)
+        }
+    }
 }
