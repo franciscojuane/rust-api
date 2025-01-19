@@ -5,19 +5,20 @@ use crate::AppState;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse};
-use axum::routing::{delete, get};
-use axum::{Json, Router};
+use axum::routing::{delete, get, post};
+use axum::{debug_handler, Json, Router};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use sea_orm::IntoActiveModel;
 
 pub fn warehouse_routes(app_state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/", get(list_warehouses).post(create_warehouse))
+        .route("/", get(list_warehouses))
+        .route("/", post(create_warehouse))
         .route(
             "/{id}",
             get(get_warehouse)
-                .post(update_warehouse)
+                .patch(update_warehouse)
                 .delete(delete_warehouse),
         )
         .with_state(app_state)
@@ -44,14 +45,10 @@ async fn get_warehouse(
     }
 }
 
-struct ListParams {
-    page: Option<u64>,
-    page_size: Option<u64>
-}
-async fn list_warehouses(Query(params) : Query<HashMap<String, u64>>, State(state): State<AppState>) -> Result<impl IntoResponse, impl IntoResponse> {
+async fn list_warehouses(Query(params) : Query<HashMap<String, u64>>, State(state): State<Arc<AppState>>) -> impl IntoResponse{
     let page =params.get("page").cloned().unwrap_or_else(|| 1);
-    let page_size = params.get("page_size").cloned().unwrap_or_else(|| 10);
-    let result = state.warehouse_repository
+    let page_size = params.get("size").cloned().unwrap_or_else(|| 10);
+    let result = state.warehouse_repository.as_ref()
         .unwrap()
         .read()
         .await
@@ -65,8 +62,9 @@ async fn list_warehouses(Query(params) : Query<HashMap<String, u64>>, State(stat
 
 }
 
-async fn create_warehouse(Json(payload): Json<warehouse::Model>, State(state): State<AppState>) -> impl IntoResponse {
-    let mut result = state.warehouse_repository
+
+async fn create_warehouse(State(state): State<Arc<AppState>>, Json(payload): Json<warehouse::Model>) -> impl IntoResponse {
+    let mut result = state.warehouse_repository.as_ref()
         .unwrap()
         .write()
         .await
@@ -79,8 +77,8 @@ async fn create_warehouse(Json(payload): Json<warehouse::Model>, State(state): S
     }
 }
 
-async fn delete_warehouse(State(state): State<AppState>, Path(id): Path<u64>) -> impl IntoResponse {
-    let result = state.warehouse_repository.unwrap().write().await.delete(id).await;
+async fn delete_warehouse(State(state): State<Arc<AppState>>, Path(id): Path<u64>) -> impl IntoResponse {
+    let result = state.warehouse_repository.as_ref().unwrap().write().await.delete(id).await;
     match result {
         Ok(_) => {StatusCode::OK}
         Err(error) => {
@@ -94,9 +92,8 @@ async fn delete_warehouse(State(state): State<AppState>, Path(id): Path<u64>) ->
 
 
 }
-
-async fn update_warehouse(State(state) : State<AppState>, Json(warehouse): Json<warehouse::Model> , Path(id) : Path<u64>) -> impl IntoResponse {
-    let result = state.warehouse_repository.unwrap()
+async fn update_warehouse(State(state) : State<Arc<AppState>>,  Path(id) : Path<u64>, Json(warehouse): Json<warehouse::Model>) -> impl IntoResponse {
+    let result = state.warehouse_repository.as_ref().unwrap()
         .write().await
         .update(id as i32, warehouse.into_active_model()).await;
     match result {

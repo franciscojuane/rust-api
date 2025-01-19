@@ -2,10 +2,10 @@
 
 use chrono::Utc;
 use sea_orm::entity::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use crate::entities::prelude::Warehouse;
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
 #[sea_orm(table_name = "warehouse")]
 pub struct Model {
     #[sea_orm(primary_key)]
