@@ -5,12 +5,12 @@ use crate::entities::{item, warehouse};
 use crate::errors::errors::CustomError;
 use chrono::Utc;
 use log::{debug, error, info};
-use sea_orm::{ActiveValue, DatabaseConnection, DbErr, EntityTrait, IntoActiveModel, QueryOrder, QuerySelect};
+use sea_orm::{ActiveValue, DatabaseConnection, DbErr, EntityTrait, IntoActiveModel, ModelTrait, QueryOrder, QuerySelect};
 use sea_orm::ActiveValue::Set;
 use sea_orm::prelude::DateTime;
 use serde::{Deserialize, Serialize};
-use serde::de::Unexpected::Option;
 use tokio::sync::RwLock;
+use crate::entities::item::Model;
 
 pub struct ItemRepository {
     database_connection: Arc<RwLock<DatabaseConnection>>
@@ -168,8 +168,35 @@ impl ItemRepository{
         }
     }
 
-    pub async fn list_items_by_warehouse_id(&self) -> Result<Vec<item::Model>, CustomError>{
+    pub async fn list_items_by_warehouse_id(&self, warehouse_id: i32, page: u64, page_size:u64) -> Result<Vec<item::Model>, CustomError>{
         let db = self.database_connection.read().await;
+        let warehouse_result = Warehouse::find_by_id(warehouse_id).one(&*db).await;
+        match warehouse_result {
+            Ok(model) => {
+                let limit = page_size;
+                let offset = limit * (page - 1);
+                 let item_result = model.unwrap().find_related(Item) .limit(limit)
+                     .offset(offset)
+                     .order_by_asc(item::Column::Id)
+                     .all(&*db)
+                     .await;
+                match item_result {
+                    Ok(items) => {
+                        Ok(items)
+
+                    }
+                    Err(error) => {
+                        error!("Couldn't list items by warehouse");
+                        Err(CustomError::DatabaseError)
+
+                    }
+                }
+            }
+            Err(error) => {
+                debug!("Warehouse with id {} not found when trying to list items by warehouse", warehouse_id);
+                Err(CustomError::ElementNotFound)
+            }
+        }
 
     }
 
@@ -180,7 +207,7 @@ pub struct ItemUpdateDTO {
     units: Option<i32>,
     price: Option<f64>,
     warehouse_id: Option<i32>,
-    effective_time: Option<DateTime>
+    effective_time: Option<DateTime>,
     expiration_time: Option<DateTime>,
     weight: Option<f64>,
 }

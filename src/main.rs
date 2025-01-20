@@ -32,9 +32,12 @@ async fn main() {
    let mut app_state = initialize_app_state().await;
    data_loader::load_data(&mut app_state).await;
 
+   let shared_app_state = Arc::new(app_state);
    let routes =
        Router::new()
-           .nest("/warehouses", crate::api::warehouse::warehouse_routes(Arc::new(app_state)));
+           .nest("/warehouses", crate::api::warehouse::warehouse_routes(Arc::clone(&shared_app_state)))
+           .nest("/items", crate::api::item::item_routes(Arc::clone(&shared_app_state)))
+       ;
 
 
    let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
