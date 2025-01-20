@@ -4,7 +4,12 @@ use crate::entities::prelude::{Item, Warehouse};
 use crate::entities::{item, warehouse};
 use crate::errors::errors::CustomError;
 use chrono::Utc;
-use sea_orm::{ActiveValue, DatabaseConnection, DbErr, EntityTrait, QueryOrder, QuerySelect};
+use log::{debug, error, info};
+use sea_orm::{ActiveValue, DatabaseConnection, DbErr, EntityTrait, IntoActiveModel, QueryOrder, QuerySelect};
+use sea_orm::ActiveValue::Set;
+use sea_orm::prelude::DateTime;
+use serde::{Deserialize, Serialize};
+use serde::de::Unexpected::Option;
 use tokio::sync::RwLock;
 
 pub struct ItemRepository {
@@ -38,9 +43,11 @@ impl ItemRepository{
         let result = Item::insert(item_active_model).exec(&*db).await;
         match result {
             Ok(insert_result) => {
+                info!("Item entity created with id {}", &insert_result.last_insert_id);
                 Ok(insert_result.last_insert_id)
             }
             Err(_) => {
+                info!("Error when creating item: {:?} ", item);
                 Err(CustomError::CreationError)
             }
         }}
@@ -49,31 +56,77 @@ impl ItemRepository{
         let db = self.database_connection.read().await;
         let result = Item::find_by_id(id as i32).one(&*db).await;
         match result {
-            Ok(item) => {
-                match item{
+            Ok(elem) => {
+                match elem{
                     None => {Err(CustomError::ElementNotFound)}
-                    Some(element) => {Ok(element)}
+                    Some(item) => {
+                        debug!("Read item with id {}", id);
+                        Ok(item)
+
+                    }
                 }
             }
             Err(error) => {
                 match error {
                     DbErr::RecordNotFound(_) => {Err(CustomError::ElementNotFound)},
-                    _ => {Err(CustomError::DatabaseError)}
+                    _ => {
+                        error!("Error reading item with id {}", id);
+                        Err(CustomError::DatabaseError)
+                    }
                 }
             }
         }
     }
 
-    pub async fn update(&mut self, id: i32, item: item::ActiveModel) -> Result<item::Model, CustomError> {
-        let mut item_active: item::ActiveModel = item;
-        item_active.id = ActiveValue::Set(id);
-        let db = self.database_connection.write().await;
-        let result = Item::update(item_active).exec(&*db).await;
+    pub async fn update(&mut self, id: i32, item_update_dto: ItemUpdateDTO) -> Result<item::Model, CustomError> {
+        let result = self.read(id as u64).await;
+        let logging_dto = item_update_dto.clone();
         match result {
-            Ok(value) => {Ok(value)}
-            Err(error) => {Err(CustomError::UpdateError)}
+            Ok(value) => {
+                let mut active_model = value.into_active_model();
+                if let Some(name) = item_update_dto.name {
+                    active_model.name = Set(name);
+                }
+                if let Some(units) = item_update_dto.units {
+                    active_model.units = Set(units);
+                }
+                if let Some(price) = item_update_dto.price {
+                    active_model.price = Set(price);
+                }
+                if let Some(warehouse_id) = item_update_dto.warehouse_id {
+                    active_model.warehouse_id = Set(warehouse_id);
+                }
+                active_model.update_time = Set(Some(Utc::now().naive_utc()));
+                if let Some(effective_time) = item_update_dto.effective_time {
+                    active_model.effective_time = Set(Some(effective_time));
+                }
+                if let Some(expiration_time) = item_update_dto.expiration_time {
+                    active_model.expiration_time = Set(Some(expiration_time));
+                }
+                if let Some(weight) = item_update_dto.weight {
+                    active_model.weight = Set(weight);
+                }
+
+                let db = self.database_connection.write().await;
+                let result = Item::update(active_model).exec(&*db).await;
+                match result {
+                    Ok(model) => {
+                        info!("Item entity updated with id {}", id);
+                        Ok(model)
+                    }
+                    Err(error) => {
+                        error!("Error updating Item entity with id {} with DTO {:?}", id, logging_dto);
+                        Err(CustomError::UpdateError)
+                    }
+                }
+            },
+            Err(error) => {
+                info!("Error when updating Item entity with id {} with values {:?} and error {}", id, logging_dto, error);
+                Err(error)
+            }
         }
     }
+
 
     pub async fn delete(&mut self,  id: u64) -> Result<(), CustomError> {
         let db = self.database_connection.write().await;
@@ -81,21 +134,24 @@ impl ItemRepository{
         match result {
             Ok(delete_result) => {
                 if delete_result.rows_affected == 0 {
+                    info!("Item entity with id {} not found for update.", id);
                     Result::Err(CustomError::ElementNotFound)
                 } else {
+                    info!("Item entity with id {} updated.", id);
                     Result::Ok(())
                 }
             }
             Err(_) => {
+                info!("Item entity with id {} couldn't be deleted", id);
                 Err(CustomError::DeletionError)
             }
         }
     }
 
-    pub async fn list(&self, page: Option<u64>, page_size:Option<u64>) -> Result<Vec<item::Model>, CustomError>{
+    pub async fn list(&self, page: u64, page_size:u64) -> Result<Vec<item::Model>, CustomError> {
         let db = self.database_connection.read().await;
-        let limit = page_size.unwrap_or_else(|| 30);
-        let offset = limit * (page.unwrap_or_else(|| 1) - 1);
+        let limit = page_size;
+        let offset = limit * (page - 1);
         let results = Item::find()
             .limit(limit)
             .offset(offset)
@@ -105,12 +161,28 @@ impl ItemRepository{
 
         match results {
             Ok(items) => {Ok(items)},
-            Err(E) => {Err(CustomError::ReadError)}
+            Err(E) => {
+                error!("Couldn't list items");
+                Err(CustomError::ReadError)
+            }
         }
+    }
 
+    pub async fn list_items_by_warehouse_id(&self) -> Result<Vec<item::Model>, CustomError>{
+        let db = self.database_connection.read().await;
 
     }
 
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ItemUpdateDTO {
+    name: Option<String>,
+    units: Option<i32>,
+    price: Option<f64>,
+    warehouse_id: Option<i32>,
+    effective_time: Option<DateTime>
+    expiration_time: Option<DateTime>,
+    weight: Option<f64>,
 }
 
 

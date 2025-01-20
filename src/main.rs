@@ -5,6 +5,7 @@ use sea_orm::{Database, DatabaseConnection};
 use std::error::Error;
 use std::sync::Arc;
 use axum::Router;
+use log::error;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
@@ -25,6 +26,8 @@ pub struct AppState{
 }
 #[tokio::main]
 async fn main() {
+
+   env_logger::init();
 
    let mut app_state = initialize_app_state().await;
    data_loader::load_data(&mut app_state).await;

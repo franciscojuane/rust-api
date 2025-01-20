@@ -4,6 +4,7 @@ use crate::entities::prelude::Warehouse;
 use crate::entities::warehouse;
 use crate::errors::errors::CustomError;
 use chrono::Utc;
+use log::{debug, error, info, trace};
 use sea_orm::{ActiveValue, DatabaseConnection, DbErr, DeleteResult, EntityTrait, InsertResult, IntoActiveModel, PaginatorTrait, QueryOrder, QuerySelect, TryGetError};
 use sea_orm::ActiveValue::Set;
 use sea_orm::prelude::DateTime;
@@ -43,9 +44,11 @@ impl WarehouseRepository{
         let result = Warehouse::insert(warehouse_active_model).exec(&*db).await;
         match result {
             Ok(insert_result) => {
+                info!("Warehouse entity created with id {}", &insert_result.last_insert_id);
                 Ok(insert_result.last_insert_id)
             }
             Err(error) => {
+                error!("Error when creating warehouse: {:?} ", item);
                 Err(CustomError::CreationError)
             }
         }
@@ -59,13 +62,20 @@ impl WarehouseRepository{
                 Ok(item) => {
                     match item{
                         None => {Err(CustomError::ElementNotFound)}
-                        Some(warehouse) => {Ok(warehouse)}
+                        Some(warehouse) => {
+                            debug!("Read warehouse with id {}", id);
+                            Ok(warehouse)
+
+                        }
                     }
                     }
                 Err(error) => {
                     match error {
                         DbErr::RecordNotFound(_) => {Err(CustomError::ElementNotFound)},
-                        _ => {Err(CustomError::DatabaseError)}
+                        _ => {
+                            error!("Error reading warehouse with id {}", id);
+                            Err(CustomError::DatabaseError)
+                        }
                     }
                     }
             }
@@ -73,6 +83,7 @@ impl WarehouseRepository{
 
     pub async fn update(&mut self, id: i32, warehouse_update_dto: WarehouseUpdateDTO) -> Result<warehouse::Model, CustomError> {
         let result = self.read(id as u64).await;
+        let logging_dto = warehouse_update_dto.clone();
         match result {
             Ok(value) => {
                 let mut active_model = value.into_active_model();
@@ -108,14 +119,17 @@ impl WarehouseRepository{
                 let result = Warehouse::update(active_model).exec(&*db).await;
                 match result {
                     Ok(model) => {
+                        info!("Warehouse entity updated with id {}", id);
                         Ok(model)
                     }
                     Err(error) => {
+                        error!("Error updating warehouse entity with id {} with DTO {:?}", id, logging_dto);
                         Err(CustomError::UpdateError)
                     }
                 }
             },
             Err(error) => {
+                info!("Error when updating warehouse entity with id {} with values {:?} and error {}", id, logging_dto, error);
                 Err(error)
             }
         }
@@ -128,12 +142,15 @@ impl WarehouseRepository{
         match result {
             Ok(delete_result) => {
                 if delete_result.rows_affected == 0 {
+                    info!("Warehouse entity with id {} not found for update.", id);
                     Result::Err(CustomError::ElementNotFound)
                 } else {
+                    info!("Warehouse entity with id {} updated.", id);
                     Result::Ok(())
                 }
             }
             Err(_) => {
+                info!("Warehouse entity with id {} couldn't be deleted", id);
                 Err(CustomError::DeletionError)
             }
         }
@@ -153,12 +170,15 @@ impl WarehouseRepository{
 
         match results {
             Ok(warehouses) => {Ok(warehouses)},
-            Err(E) => {Err(CustomError::ReadError)}
+            Err(E) => {
+                error!("Couldn't list warehouses");
+                Err(CustomError::ReadError)
+            }
         }
     }
 }
 
-#[derive(Serialize,Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct WarehouseUpdateDTO {
     pub warehouse_key: Option<String>,
     pub name: Option<String>,
@@ -167,8 +187,6 @@ pub struct WarehouseUpdateDTO {
     pub city: Option<String>,
     pub region: Option<String>,
     pub postal_code: Option<String>,
-    pub creation_time: Option<DateTime>,
-    pub update_time: Option<DateTime>,
     pub effective_time: Option<DateTime>,
     pub expiration_time: Option<DateTime>
 }
