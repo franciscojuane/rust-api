@@ -70,7 +70,7 @@ impl ItemRepository{
                 match error {
                     DbErr::RecordNotFound(_) => {Err(CustomError::ElementNotFound)},
                     _ => {
-                        error!("Error reading item with id {}", id);
+                        error!("Error reading item with id {} : ", id, error.to_string());
                         Err(CustomError::DatabaseError)
                     }
                 }
@@ -186,7 +186,7 @@ impl ItemRepository{
 
                     }
                     Err(error) => {
-                        error!("Couldn't list items by warehouse");
+                        error!("Couldn't list items by warehouse: {}" , error.to_string());
                         Err(CustomError::DatabaseError)
 
                     }

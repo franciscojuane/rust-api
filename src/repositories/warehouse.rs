@@ -73,7 +73,7 @@ impl WarehouseRepository{
                     match error {
                         DbErr::RecordNotFound(_) => {Err(CustomError::ElementNotFound)},
                         _ => {
-                            error!("Error reading warehouse with id {}", id);
+                            error!("Error reading warehouse with id {}: ", id, error.to_string());
                             Err(CustomError::DatabaseError)
                         }
                     }
