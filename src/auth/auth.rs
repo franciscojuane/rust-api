@@ -70,16 +70,10 @@ pub async fn jwt_check_middleware(request: Request, next: Next) -> Response {
     if check_jwt_result.is_err(){
         return (StatusCode::UNAUTHORIZED, "Invalid Jwt token").into_response()
     }
-
+    
     let claims = check_jwt_result.unwrap();
-
-    println!("{:?}", claims);
-
     let response =  next.run(request).await;
-
     response
-
-
 }
 
 
@@ -87,9 +81,7 @@ pub async fn jwt_check_middleware(request: Request, next: Next) -> Response {
 
 
 fn check_jwt_token(token: &str) -> Result<Claims, CustomError> {
-    println!("{}", token);
     let key = env::var("SECRET_KEY").expect("Secret key couldn't be read");
-    println!("{}", key);
     let token_result = decode::<Claims>(&token, &DecodingKey::from_secret(key.as_ref()), &Validation::default());
     if let Ok(tokenData) = token_result {
         Ok(tokenData.claims)
