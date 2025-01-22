@@ -10,6 +10,7 @@ pub enum CustomError {
     ReadError,
     DatabaseError,
     DeletionError,
+    INVALID_JWT_TOKEN,
 }
 
 impl Display for CustomError {

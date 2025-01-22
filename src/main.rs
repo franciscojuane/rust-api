@@ -4,10 +4,14 @@ use entities::*;
 use sea_orm::{Database, DatabaseConnection};
 use std::error::Error;
 use std::sync::Arc;
+use axum::middleware::from_fn;
 use axum::Router;
+use dotenvy::dotenv;
 use log::error;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
+use tower::layer::layer_fn;
+use tower::ServiceBuilder;
 
 mod entities;
 
@@ -18,6 +22,7 @@ mod repositories;
 mod errors;
 mod data_loader;
 mod api;
+mod auth;
 
 pub struct AppState{
    pub database_connection: Option<Arc<RwLock<DatabaseConnection>>>,
@@ -29,20 +34,32 @@ async fn main() {
 
    env_logger::init();
 
+   dotenv().ok();
+
    let mut app_state = initialize_app_state().await;
    data_loader::load_data(&mut app_state).await;
 
    let shared_app_state = Arc::new(app_state);
-   let routes =
+
+
+
+   let auth_routes = auth::auth::get_router();
+
+   let api_routes =
        Router::new()
            .nest("/warehouses", crate::api::warehouse::warehouse_routes(Arc::clone(&shared_app_state)))
            .nest("/items", crate::api::item::item_routes(Arc::clone(&shared_app_state)))
+           .layer(from_fn(crate::auth::auth::jwt_check_middleware))
        ;
 
+   let all_routes = Router::new()
+       .nest("/auth", auth_routes)
+
+       .nest("/api", api_routes);
 
    let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
    println!("->> LISTENING on {:?}\n", listener.local_addr());
-   axum::serve(listener, routes.into_make_service())
+   axum::serve(listener, all_routes.into_make_service())
        .await
        .unwrap();
 
