@@ -50,6 +50,7 @@ async fn main() {
            .nest("/warehouses", crate::api::warehouse::warehouse_routes(Arc::clone(&shared_app_state)))
            .nest("/items", crate::api::item::item_routes(Arc::clone(&shared_app_state)))
            .layer(from_fn(crate::auth::auth::jwt_check_middleware))
+           .layer(ServiceBuilder::new().layer(api::middlewares::get_rate_limit_layer()))
        ;
 
    let all_routes = Router::new()
