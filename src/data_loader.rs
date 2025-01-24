@@ -5,10 +5,9 @@ use fake::faker::address::raw::StreetName;
 use fake::faker::number::raw::NumberWithFormat;
 use fake::locales::EN;
 use fake::{faker, rand, Fake, Rng};
-use std::error::Error;
 use std::sync::Arc;
 
-pub async fn load_data(app_state: &mut AppState) -> Result<(), Box<dyn Error>>{
+pub async fn load_data(app_state: &mut AppState) {
 
     let warehouse_repository = Arc::clone(&app_state.warehouse_repository.as_mut().unwrap());
     let item_repository = Arc::clone(&app_state.item_repository.as_mut().unwrap());
@@ -29,7 +28,7 @@ pub async fn load_data(app_state: &mut AppState) -> Result<(), Box<dyn Error>>{
             ..Default::default()
         };
 
-        let mut warehouse_id = warehouse_repository.write().await.create(&warehouse1).await?;
+        let warehouse_id = warehouse_repository.write().await.create(&warehouse1).await.unwrap();
 
         let item_list = ["iPhone 14", "iPhone 14 Pro", "iPhone 14 Pro Max", "Samsung Galaxy",
         "Sony Projector", "Asus Display", "Logitech Camera", "Genius Mouse"];
@@ -42,7 +41,7 @@ pub async fn load_data(app_state: &mut AppState) -> Result<(), Box<dyn Error>>{
                 warehouse_id,
                 ..Default::default()
             };
-            item_repository.write().await.create(&item).await?;
+            item_repository.write().await.create(&item).await.unwrap();
         }
 
 
@@ -58,9 +57,7 @@ pub async fn load_data(app_state: &mut AppState) -> Result<(), Box<dyn Error>>{
         email: "admin@admin.com".to_string(),
     };
 
-    user_repository.write().await.create(&user).await;
+    user_repository.write().await.create(&user).await.expect("User couldn't be created");
 
-
-    Ok(())
 }
 

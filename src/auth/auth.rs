@@ -25,6 +25,7 @@ struct Params {
     password: String
 }
 
+#[derive(Serialize)]
 struct JwtTokenResponse {
     jwt: String
 }
@@ -60,7 +61,10 @@ async fn login(State(app_state): State<Arc<AppState>>, Json(params): Json<Params
                     user_id: 1,
                 };
                 let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret(key.as_ref())).expect("");
-                Ok(Json(token))
+                let jwt_token_response = JwtTokenResponse {
+                    jwt: token,
+                };
+                Ok(Json(jwt_token_response))
             }else{
                 Err(StatusCode::UNAUTHORIZED)
             }
@@ -79,8 +83,8 @@ async fn login(State(app_state): State<Arc<AppState>>, Json(params): Json<Params
 pub fn check_jwt_token(token: &str) -> Result<Claims, CustomError> {
     let key = env::var("SECRET_KEY").expect("Secret key couldn't be read");
     let token_result = decode::<Claims>(&token, &DecodingKey::from_secret(key.as_ref()), &Validation::default());
-    if let Ok(tokenData) = token_result {
-        Ok(tokenData.claims)
+    if let Ok(token_data) = token_result {
+        Ok(token_data.claims)
     } else{
         println!("{:?}", token_result.err().unwrap());
         info!("Invalid JWT Token : {}" , token);

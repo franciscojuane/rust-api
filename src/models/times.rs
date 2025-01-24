@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use chrono::{DateTime, Utc};
 #[derive(Debug)]
 pub struct Times {

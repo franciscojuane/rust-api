@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 #[derive(Debug)]
 pub enum RegionEnum{
     AL, AK, AZ, AR, CA, CO, CT, DE, FL, GA, HI, ID, IL, IN, IA, KS,
