@@ -2,3 +2,4 @@
 
 pub use super::item::Entity as Item;
 pub use super::warehouse::Entity as Warehouse;
+pub use super::user::Entity as User;

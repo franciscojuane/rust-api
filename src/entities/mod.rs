@@ -4,3 +4,4 @@ pub mod prelude;
 
 pub mod item;
 pub mod warehouse;
+pub mod user;

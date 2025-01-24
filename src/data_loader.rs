@@ -1,4 +1,4 @@
-use crate::entities::{item, warehouse};
+use crate::entities::{item, user, warehouse};
 use crate::AppState;
 use fake::faker::address::en::{CityName, StateAbbr};
 use fake::faker::address::raw::StreetName;
@@ -13,6 +13,7 @@ pub async fn load_data(app_state: &mut AppState) -> Result<(), Box<dyn Error>>{
 
     let mut warehouse_repository = Arc::clone(&app_state.warehouse_repository.as_mut().unwrap());
     let mut item_repository = Arc::clone(&app_state.item_repository.as_mut().unwrap());
+    let mut user_repository = Arc::clone(&app_state.user_repository.as_mut().unwrap());
 
     let mut warehouse_id = 0;
     for i in 1..=10 {
@@ -47,6 +48,19 @@ pub async fn load_data(app_state: &mut AppState) -> Result<(), Box<dyn Error>>{
 
 
     }
+
+
+    let user = user::Model {
+        id: 0,
+        first_name: "Francisco".to_string(),
+        last_name: "Juane".to_string(),
+        password: "123456".to_string(),
+        telephone: "123456789".to_string(),
+        email: "admin@admin.com".to_string(),
+    };
+
+    user_repository.write().await.create(&user).await;
+
 
     Ok(())
 }
