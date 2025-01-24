@@ -1,17 +1,13 @@
 use crate::entities::item;
-use crate::entities::item::Model;
 use crate::errors::errors::CustomError;
 use crate::AppState;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse};
-use axum::routing::{delete, get, post};
-use axum::{debug_handler, Json, Router};
+use axum::response::{IntoResponse};
+use axum::routing::{ get, post};
+use axum::{Json, Router};
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
-use sea_orm::ActiveValue::Set;
-use sea_orm::IntoActiveModel;
-use sea_orm::prelude::DateTime;
+use std::sync::{Arc};
 use crate::repositories::item::ItemUpdateDTO;
 
 pub fn item_routes(app_state: Arc<AppState>) -> Router {
@@ -68,7 +64,7 @@ async fn list_items(Query(params) : Query<HashMap<String, u64>>, State(state): S
 
 
 async fn create_item(State(state): State<Arc<AppState>>, Json(payload): Json<item::Model>) -> impl IntoResponse {
-    let mut result = state.item_repository.as_ref()
+    let result = state.item_repository.as_ref()
         .unwrap()
         .write()
         .await
@@ -77,7 +73,7 @@ async fn create_item(State(state): State<Arc<AppState>>, Json(payload): Json<ite
 
     match result {
         Ok(id) => {Ok(Json(id))}
-        Err(error) => {Err(StatusCode::BAD_REQUEST)}
+        Err(_) => {Err(StatusCode::BAD_REQUEST)}
     }
 }
 
@@ -86,7 +82,7 @@ async fn delete_item(State(state): State<Arc<AppState>>, Path(id): Path<u64>) ->
     match result {
         Ok(_) => {StatusCode::OK}
         Err(error) => {
-            match(error){
+            match error{
                 CustomError::ElementNotFound => {StatusCode::NOT_FOUND}
                 CustomError::DeletionError => {StatusCode::INTERNAL_SERVER_ERROR},
                 _ => StatusCode::INTERNAL_SERVER_ERROR
@@ -101,7 +97,7 @@ async fn update_item(State(state) : State<Arc<AppState>>,  Path(id) : Path<u64>,
         Ok(model) => {
             Ok(Json(model))
         },
-        Err(error) => {
+        Err(_) => {
             Err(StatusCode::BAD_REQUEST)
         }
     }

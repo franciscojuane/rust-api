@@ -1,17 +1,13 @@
-use std::ops::Deref;
 use std::sync::Arc;
 use crate::entities::prelude::User;
 use crate::entities::user;
 use crate::errors::errors::CustomError;
-use chrono::Utc;
-use log::{debug, error, info, trace};
-use sea_orm::{ActiveValue, ColumnTrait, DatabaseConnection, DbErr, DeleteResult, EntityTrait, InsertResult, IntoActiveModel, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, TryGetError};
+use log::{debug, error, info};
+use sea_orm::{ActiveValue, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, IntoActiveModel, QueryFilter, QueryOrder, QuerySelect};
 use sea_orm::ActiveValue::Set;
-use sea_orm::prelude::DateTime;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use crate::auth;
-use crate::entities::user::{ActiveModel, Model};
 
 pub struct UserRepository {
     database_connection: Arc<RwLock<DatabaseConnection>>
@@ -42,7 +38,7 @@ impl UserRepository{
                 info!("User entity created with id {}", &insert_result.last_insert_id);
                 Ok(insert_result.last_insert_id)
             }
-            Err(error) => {
+            Err(_) => {
                 error!("Error when creating user: {:?} ", item);
                 Err(CustomError::CreationError)
             }
@@ -133,7 +129,7 @@ impl UserRepository{
                         info!("User entity updated with id {}", id);
                         Ok(model)
                     }
-                    Err(error) => {
+                    Err(_) => {
                         error!("Error updating user entity with id {} with DTO {:?}", id, logging_dto);
                         Err(CustomError::UpdateError)
                     }
@@ -181,7 +177,7 @@ impl UserRepository{
 
         match results {
             Ok(users) => {Ok(users)},
-            Err(E) => {
+            Err(_) => {
                 error!("Couldn't list users");
                 Err(CustomError::ReadError)
             }

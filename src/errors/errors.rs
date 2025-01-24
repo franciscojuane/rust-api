@@ -1,6 +1,5 @@
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use sea_orm::DeriveDisplay;
 
 #[derive(Debug)]
 pub enum CustomError {
@@ -10,7 +9,7 @@ pub enum CustomError {
     ReadError,
     DatabaseError,
     DeletionError,
-    INVALID_JWT_TOKEN,
+    InvalidJwtToken,
 }
 
 impl Display for CustomError {

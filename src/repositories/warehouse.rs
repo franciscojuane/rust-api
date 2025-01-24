@@ -1,16 +1,14 @@
-use std::ops::Deref;
 use std::sync::Arc;
 use crate::entities::prelude::Warehouse;
 use crate::entities::warehouse;
 use crate::errors::errors::CustomError;
 use chrono::Utc;
-use log::{debug, error, info, trace};
-use sea_orm::{ActiveValue, DatabaseConnection, DbErr, DeleteResult, EntityTrait, InsertResult, IntoActiveModel, PaginatorTrait, QueryOrder, QuerySelect, TryGetError};
+use log::{debug, error, info};
+use sea_orm::{ActiveValue, DatabaseConnection, DbErr, EntityTrait, IntoActiveModel, QueryOrder, QuerySelect};
 use sea_orm::ActiveValue::Set;
 use sea_orm::prelude::DateTime;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use crate::entities::warehouse::{ActiveModel, Model};
 
 pub struct WarehouseRepository {
     database_connection: Arc<RwLock<DatabaseConnection>>
@@ -47,7 +45,7 @@ impl WarehouseRepository{
                 info!("Warehouse entity created with id {}", &insert_result.last_insert_id);
                 Ok(insert_result.last_insert_id)
             }
-            Err(error) => {
+            Err(_) => {
                 error!("Error when creating warehouse: {:?} ", item);
                 Err(CustomError::CreationError)
             }
@@ -122,7 +120,7 @@ impl WarehouseRepository{
                         info!("Warehouse entity updated with id {}", id);
                         Ok(model)
                     }
-                    Err(error) => {
+                    Err(_) => {
                         error!("Error updating warehouse entity with id {} with DTO {:?}", id, logging_dto);
                         Err(CustomError::UpdateError)
                     }
@@ -170,7 +168,7 @@ impl WarehouseRepository{
 
         match results {
             Ok(warehouses) => {Ok(warehouses)},
-            Err(E) => {
+            Err(_) => {
                 error!("Couldn't list warehouses");
                 Err(CustomError::ReadError)
             }

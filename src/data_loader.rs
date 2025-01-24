@@ -5,18 +5,17 @@ use fake::faker::address::raw::StreetName;
 use fake::faker::number::raw::NumberWithFormat;
 use fake::locales::EN;
 use fake::{faker, rand, Fake, Rng};
-use sea_orm::EntityTrait;
 use std::error::Error;
 use std::sync::Arc;
 
 pub async fn load_data(app_state: &mut AppState) -> Result<(), Box<dyn Error>>{
 
-    let mut warehouse_repository = Arc::clone(&app_state.warehouse_repository.as_mut().unwrap());
-    let mut item_repository = Arc::clone(&app_state.item_repository.as_mut().unwrap());
-    let mut user_repository = Arc::clone(&app_state.user_repository.as_mut().unwrap());
+    let warehouse_repository = Arc::clone(&app_state.warehouse_repository.as_mut().unwrap());
+    let item_repository = Arc::clone(&app_state.item_repository.as_mut().unwrap());
+    let user_repository = Arc::clone(&app_state.user_repository.as_mut().unwrap());
 
-    let mut warehouse_id = 0;
-    for i in 1..=10 {
+
+    for _ in 1..=10 {
         let name: String = faker::name::en::FirstName().fake();
         let warehouse1 = warehouse::Model {
             id: Default::default(),
@@ -30,7 +29,7 @@ pub async fn load_data(app_state: &mut AppState) -> Result<(), Box<dyn Error>>{
             ..Default::default()
         };
 
-        warehouse_id = warehouse_repository.write().await.create(&warehouse1).await?;
+        let mut warehouse_id = warehouse_repository.write().await.create(&warehouse1).await?;
 
         let item_list = ["iPhone 14", "iPhone 14 Pro", "iPhone 14 Pro Max", "Samsung Galaxy",
         "Sony Projector", "Asus Display", "Logitech Camera", "Genius Mouse"];

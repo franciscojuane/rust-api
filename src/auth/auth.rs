@@ -1,17 +1,13 @@
 use std::env;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{StatusCode};
 use axum::{Json, Router};
-use axum::extract::{Request, State};
-use axum::middleware::Next;
-use axum::response::{IntoResponse, Response};
+use axum::extract::{State};
+use axum::response::{IntoResponse};
 use axum::routing::post;
-use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use log::info;
-use rand::Rng;
-use sea_orm::sea_query::ExprTrait;
 use serde::{Deserialize, Serialize};
 use crate::errors::errors::CustomError;
 use argon2::{
@@ -21,11 +17,7 @@ use argon2::{
     },
     Argon2
 };
-use http::Method;
-use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
-use crate::api::middlewares;
 use crate::AppState;
-use crate::entities::user::Model;
 
 #[derive(Deserialize)]
 struct Params {
@@ -73,7 +65,7 @@ async fn login(State(app_state): State<Arc<AppState>>, Json(params): Json<Params
                 Err(StatusCode::UNAUTHORIZED)
             }
         },
-        Err(error) => {
+        Err(_) => {
             Err(StatusCode::UNAUTHORIZED)
         }
     }
@@ -92,7 +84,7 @@ pub fn check_jwt_token(token: &str) -> Result<Claims, CustomError> {
     } else{
         println!("{:?}", token_result.err().unwrap());
         info!("Invalid JWT Token : {}" , token);
-        Err(CustomError::INVALID_JWT_TOKEN)
+        Err(CustomError::InvalidJwtToken)
     }
 }
 

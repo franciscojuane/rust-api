@@ -1,7 +1,6 @@
-use std::ops::Deref;
 use std::sync::Arc;
 use crate::entities::prelude::{Item, Warehouse};
-use crate::entities::{item, warehouse};
+use crate::entities::{item};
 use crate::errors::errors::CustomError;
 use chrono::Utc;
 use log::{debug, error, info};
@@ -10,7 +9,6 @@ use sea_orm::ActiveValue::Set;
 use sea_orm::prelude::DateTime;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use crate::entities::item::Model;
 
 pub struct ItemRepository {
     database_connection: Arc<RwLock<DatabaseConnection>>
@@ -114,7 +112,7 @@ impl ItemRepository{
                         info!("Item entity updated with id {}", id);
                         Ok(model)
                     }
-                    Err(error) => {
+                    Err(_) => {
                         error!("Error updating Item entity with id {} with DTO {:?}", id, logging_dto);
                         Err(CustomError::UpdateError)
                     }
@@ -161,7 +159,7 @@ impl ItemRepository{
 
         match results {
             Ok(items) => {Ok(items)},
-            Err(E) => {
+            Err(_) => {
                 error!("Couldn't list items");
                 Err(CustomError::ReadError)
             }
@@ -192,7 +190,7 @@ impl ItemRepository{
                     }
                 }
             }
-            Err(error) => {
+            Err(_) => {
                 debug!("Warehouse with id {} not found when trying to list items by warehouse", warehouse_id);
                 Err(CustomError::ElementNotFound)
             }
